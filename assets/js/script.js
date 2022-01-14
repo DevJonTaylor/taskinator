@@ -41,12 +41,40 @@ class TaskFormController extends AbstractElement {
     this.form = this.$('.task-form');
     this.taskName = this.$('[name="task-name"]');
     this.taskType = this.$('[name="task-type"]');
-    this.submitBtn = this.$('#save-task')
+    this.submitBtn = this.$('#save-task');
+  }
+
+  get isFormReady() {
+    return (!this.isNameEmpty && !this.isTypeEmpty);
+  }
+
+  get isNameEmpty() {
+    return this.nameValue === '';
+  }
+
+  get isTypeEmpty() {
+    return this.typeValue === '';
+  }
+
+  get nameValue() {
+    return this.taskName.value;
+  }
+
+  set nameValue(value) {
+    this.taskName.value = value;
+  }
+
+  get typeValue() {
+    return this.taskType.value;
+  }
+
+  set typeValue(value) {
+    this.taskType.value = value;
   }
 
   reset() {
-    this.taskName.value = '';
-    this.taskType.value = '';
+    this.nameValue = '';
+    this.typeValue = '';
   }
 }
 
@@ -75,10 +103,15 @@ const taskList = new TaskListController;
 
 function newTaskHandler(event) {
   event.preventDefault();
+  
+  if(!taskForm.isFormReady) {
+    alert('Please provide a task name and type.');
+    return false;
+  }
+  const task = taskList.newTask(taskForm.nameValue, taskForm.typeValue);  
 
-  const task = taskList.newTask(taskForm.taskName.value, taskForm.taskType.value);
-  taskList.appendToList(task);
   taskForm.reset();
+  taskList.appendToList(task);
 }
 
 taskForm.form.addEventListener('submit', newTaskHandler);
