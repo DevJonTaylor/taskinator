@@ -64,25 +64,25 @@ class TaskFormController extends AbstractElement {
     return this.typeValue === '';
   }
 
-  get nameValue() {
+  get name() {
     return this.taskName.value;
   }
 
-  set nameValue(value) {
+  set name(value) {
     this.taskName.value = value;
   }
 
-  get typeValue() {
+  get type() {
     return this.taskType.value;
   }
 
-  set typeValue(value) {
+  set type(value) {
     this.taskType.value = value;
   }
 
   reset() {
-    this.nameValue = '';
-    this.typeValue = '';
+    this.name = '';
+    this.type = '';
   }
 }
 
@@ -151,6 +151,7 @@ class TaskController {
   static getTask(el) {
     switch(el.constructor.name) {
       case 'HTMLButtonElement':
+      case 'HTMLSelectElement':
         return new TaskController(el.parentElement.parentElement.dataset.taskId);
       case 'HTMLLIElement':
         return new TaskController(el.dataset.taskId);
@@ -171,7 +172,7 @@ class TaskController {
     if(id === undefined) {
       this.newTask();
     } else {
-      this.task = document.querySelector(`[data-task-id="${id}"]`);
+      this.task = document.querySelector(`.task-item[data-task-id="${id}"]`);
     }
   }
 
@@ -185,7 +186,6 @@ class TaskController {
   newTask() {
     this.task = document.createElement('li');
     this.task.classList.add('task-item');
-    this.task.dataset.taskId = this.newId();
     this.task.insertAdjacentHTML('beforeend', `<div class="task-info">
       <h3 class="task-name"></h3>
       <span class="task-type"></span>
@@ -199,6 +199,7 @@ class TaskController {
         <option value="Completed">Completed</option>
       </select>
     </div>`);
+    this.id = this.newId();
   }
 
   moveTaskToDo() {
@@ -221,7 +222,7 @@ class TaskController {
     return this.task.querySelector('[name="status-change"]').value;
   }
 
-  edit() {
+  changeState() {
     switch(this.getStatusChange()) {
       case 'To Do':
         this.moveTaskToDo();
@@ -241,6 +242,14 @@ class TaskController {
 
   $(selector) {
     return this.task.querySelector(selector);
+  }
+
+  get id() {
+    return this.task.dataset.taskId;
+  }
+
+  set id(str) {
+    this.task.dataset.taskId = str;
   }
 
   get name() {
@@ -272,7 +281,7 @@ class TaskController {
 
   set state(str) {
     this.$('[name="status-change"]').value = str;
-    this.edit();
+    this.changeState();
   }
 
   toObject() {
@@ -298,13 +307,21 @@ function newTaskHandler(event) {
     alert('Please provide a task name and type.');
     return false;
   }
-  let task = new TaskController();
-  task.name = taskForm.nameValue;
-  task.type =taskForm.typeValue;
-  task.state = 'To Do';
 
+  if(taskForm.submitBtn.innerText === 'Save Task') {
+    let task = new TaskController(taskForm.submitBtn.dataset.taskId);
+    task.name = taskForm.name;
+    task.type = taskForm.type;
+    taskForm.submitBtn.dataset.taskId = '';
+    taskForm.submitBtn.innerText = 'Add Task';
+  } else {
+    let task = new TaskController();
+    task.name = taskForm.name;
+    task.type =taskForm.type;
+    task.state = 'To Do';
+  }
   taskForm.reset();
-  updateStorage()
+  updateStorage();
 }
 
 function updateStorage() {
@@ -333,8 +350,11 @@ function taskActionHandler(event) {
   const el = event.target;
   switch(el.classList.value) {
     case 'btn edit-btn':
-      TaskController.getTask(el).edit();
-      updateStorage();
+      let task = TaskController.getTask(el);
+      taskForm.submitBtn.dataset.taskId = task.id;
+      taskForm.submitBtn.innerText = 'Save Task';
+      taskForm.name = task.name;
+      taskForm.type = task.type;
       return;
     case 'btn delete-btn':
       TaskController.getTask(el).delete();
@@ -345,10 +365,16 @@ function taskActionHandler(event) {
   }
 }
 
+function taskChangeHandler(event) {
+  TaskController.getTask(event.target).changeState();
+  updateStorage();
+}
+
 const tasks = [];
 
 taskForm.form.addEventListener('submit', newTaskHandler);
-taskList.grandParent.addEventListener('click', taskActionHandler)
+taskList.grandParent.addEventListener('click', taskActionHandler);
+taskList.grandParent.addEventListener('change', taskChangeHandler);
 
 document.onreadystatechange = function() {
   if(document.readyState === 'complete') {
